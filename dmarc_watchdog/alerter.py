@@ -68,15 +68,13 @@ def _build_email_body(anomalies: list[Anomaly], domain: str) -> str:
     ]
 
     for anomaly in anomalies:
-        confidencePercent = int(round(anomaly.confidence * 100))
-        anomalyLabel = _human_anomaly_label(anomaly)
-        subjectText = _human_subject_text(anomaly)
+        headerText = _human_header_text(anomaly)
+        infoText = _human_info_text(anomaly)
         actionText = _human_action_text(anomaly)
-        lines.append(
-            f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] "
-            f"{anomalyLabel}: {subjectText} "
-            f"({anomaly.messageCount} messages). Action: {actionText}"
-        )
+        lines.append(f"- {headerText}")
+        lines.append(f"  Info: {infoText}")
+        lines.append(f"  Action: {actionText}")
+        lines.append("")
 
     lines.extend(
         [
@@ -103,12 +101,24 @@ def _human_anomaly_label(anomaly: Anomaly) -> str:
     return anomaly.anomalyType
 
 
-def _human_subject_text(anomaly: Anomaly) -> str:
+def _human_header_text(anomaly: Anomaly) -> str:
+    confidencePercent = int(round(anomaly.confidence * 100))
+    label = _human_anomaly_label(anomaly)
+
+    if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
+        rdns = anomaly.reverseDnsHostname or "unresolved"
+        return f"[{anomaly.riskLevel.upper()} {confidencePercent}%] {label}: {anomaly.subject} ({rdns})"
+
+    return f"[{anomaly.riskLevel.upper()} {confidencePercent}%] {label}: {anomaly.subject}"
+
+
+def _human_info_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
         provider = anomaly.provider or "unknown"
         rdns = anomaly.reverseDnsHostname or "unresolved"
-        return f"{anomaly.subject} via {provider}, rDNS {rdns}"
-    return anomaly.subject
+        return f"{anomaly.messageCount} messages; provider {provider}; rDNS {rdns}."
+
+    return f"{anomaly.messageCount} messages."
 
 def _human_action_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType == "unknown-sender":
