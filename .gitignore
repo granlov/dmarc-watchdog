@@ -8,6 +8,10 @@ __pycache__/
 .env
 config/config.local.json
 config/allowlist.local.json
+config/config.*.json
+config/allowlist.*.json
+!config/config.example.json
+!config/allowlist.example.json
 
 # Runtime state
 state/

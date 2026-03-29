@@ -96,16 +96,11 @@ def load_app_config(configFilePath: str) -> AppConfig:
     )
 
     parsedSenderIdentity = parsedJson.get("senderIdentity", {})
+    providerHostnamePatterns = _load_provider_patterns(parsedSenderIdentity)
     senderIdentity = SenderIdentityConfig(
         enableReverseDns=parsedSenderIdentity.get("enableReverseDns", True),
-        approvedProviders=parsedSenderIdentity.get("approvedProviders", ["one.com", "shopify"]),
-        providerHostnamePatterns=parsedSenderIdentity.get(
-            "providerHostnamePatterns",
-            {
-                "one.com": ["one.com"],
-                "shopify": ["shopify", "sendgrid.net"],
-            },
-        ),
+        approvedProviders=parsedSenderIdentity.get("approvedProviders", []),
+        providerHostnamePatterns=providerHostnamePatterns,
     )
 
     return AppConfig(
@@ -115,6 +110,17 @@ def load_app_config(configFilePath: str) -> AppConfig:
         rules=rules,
         senderIdentity=senderIdentity,
     )
+
+
+def _load_provider_patterns(parsedSenderIdentity: dict[str, Any]) -> dict[str, list[str]]:
+    patternsFile = parsedSenderIdentity.get("providerPatternsFile")
+    if patternsFile:
+        patternsPath = Path(patternsFile)
+        if not patternsPath.exists():
+            raise ConfigurationError(f"Provider patterns file not found: {patternsFile}")
+        with patternsPath.open("r", encoding="utf-8") as fileHandle:
+            return json.load(fileHandle)
+    return parsedSenderIdentity.get("providerHostnamePatterns", {})
 
 
 def load_allowlist(allowlistFilePath: str) -> dict[str, list[str]]:

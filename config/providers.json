@@ -1,0 +1,27 @@
+{
+  "Apple": [
+    "apple.com",
+    "icloud.com"
+  ],
+  "AWS": [
+    "amazonses.com",
+    "smtp-out",
+    "amazonaws.com"
+  ],
+  "Google": [
+    "google.com",
+    "googlemail.com"
+  ],
+  "Microsoft": [
+    "outlook.com",
+    "microsoft.com",
+    "protection.outlook.com"
+  ],
+  "One": [
+    "one.com"
+  ],
+  "Shopify": [
+    "shopify",
+    "sendgrid.net"
+  ]
+}

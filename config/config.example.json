@@ -1,11 +1,11 @@
 {
   "runtime": {
     "mode": "local-files",
-    "lookbackHours": 24
+    "lookbackHours": 48
   },
   "paths": {
-    "stateFile": "state/state.json",
-    "allowlistFile": "config/allowlist.local.json",
+    "stateFile": "state/state.example.json",
+    "allowlistFile": "config/allowlist.example.json",
     "localReportDirectory": "samples/reports"
   },
   "imap": {
@@ -15,10 +15,13 @@
     "password": "replace-me",
     "mailbox": "INBOX",
     "filterSubjectContains": [
-      "dmarc",
-      "aggregate"
+      "Report domain",
+      "Report Domain"
     ],
-    "filterFromContains": [],
+    "filterFromContains": [
+      "noreply-dmarc-support@google.com",
+      "dmarcreport@microsoft.com"
+    ],
     "filterToContains": []
   },
   "rules": {
@@ -31,23 +34,8 @@
   "senderIdentity": {
     "enableReverseDns": true,
     "approvedProviders": [
-      "one.com",
-      "shopify",
-      "aws ses"
+      "AWS"
     ],
-    "providerHostnamePatterns": {
-      "one.com": [
-        "one.com"
-      ],
-      "shopify": [
-        "shopify",
-        "sendgrid.net"
-      ],
-      "aws ses": [
-        "amazonses.com",
-        "smtp-out",
-        "amazonaws.com"
-      ]
-    }
+    "providerPatternsFile": "config/providers.json"
   }
 }
