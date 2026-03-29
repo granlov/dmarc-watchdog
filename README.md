@@ -133,6 +133,7 @@ Default approved providers are:
 
 - one.com
 - shopify
+- aws ses
 
 If a sender does not match approved providers, the tool emits `Unexpected provider`.
 

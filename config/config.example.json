@@ -27,7 +27,8 @@
     "enableReverseDns": true,
     "approvedProviders": [
       "one.com",
-      "shopify"
+      "shopify",
+      "aws ses"
     ],
     "providerHostnamePatterns": {
       "one.com": [
@@ -36,6 +37,11 @@
       "shopify": [
         "shopify",
         "sendgrid.net"
+      ],
+      "aws ses": [
+        "amazonses.com",
+        "smtp-out",
+        "amazonaws.com"
       ]
     }
   }
