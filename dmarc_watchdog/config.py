@@ -20,7 +20,6 @@ class ImapConfig:
 @dataclass
 class RuntimeConfig:
     mode: str
-    lookbackHours: int
 
 
 @dataclass
