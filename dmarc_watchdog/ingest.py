@@ -49,7 +49,9 @@ def fetch_mail_payloads_from_imap(
     username: str,
     password: str,
     mailbox: str,
-    searchCriterion: str,
+    filterSubjectContains: list[str],
+    filterFromContains: list[str],
+    filterToContains: list[str],
     lookbackHours: int,
 ) -> list[MailPayload]:
     nowUtc = datetime.now(timezone.utc)
@@ -59,8 +61,8 @@ def fetch_mail_payloads_from_imap(
         mailboxConnection.login(username, password)
         mailboxConnection.select(mailbox)
 
-        searchQuery = f'({searchCriterion} SINCE "{sinceDate}")'
-        status, messageIdBlocks = mailboxConnection.search(None, searchQuery)
+        # Ignore unread/read status and search by time window only.
+        status, messageIdBlocks = mailboxConnection.search(None, f'(SINCE "{sinceDate}")')
         if status != "OK":
             return []
 
@@ -72,6 +74,14 @@ def fetch_mail_payloads_from_imap(
 
             rawMessage = rawMessageData[0][1]
             parsedMessage = email.message_from_bytes(rawMessage)
+            if not _mail_matches_header_filters(
+                parsedMessage=parsedMessage,
+                filterSubjectContains=filterSubjectContains,
+                filterFromContains=filterFromContains,
+                filterToContains=filterToContains,
+            ):
+                continue
+
             messageIdHeader = parsedMessage.get("Message-ID", f"imap-{messageSequence.decode()}")
 
             attachments: list[AttachmentPayload] = []
@@ -89,3 +99,31 @@ def fetch_mail_payloads_from_imap(
             payloads.append(MailPayload(messageId=messageIdHeader, attachments=attachments))
 
         return payloads
+
+
+def _mail_matches_header_filters(
+    parsedMessage,
+    filterSubjectContains: list[str],
+    filterFromContains: list[str],
+    filterToContains: list[str],
+) -> bool:
+    subjectHeader = (parsedMessage.get("Subject") or "").lower()
+    fromHeader = (parsedMessage.get("From") or "").lower()
+    toHeader = (parsedMessage.get("To") or "").lower()
+
+    subjectMatches = _header_matches_terms(subjectHeader, filterSubjectContains)
+    fromMatches = _header_matches_terms(fromHeader, filterFromContains)
+    toMatches = _header_matches_terms(toHeader, filterToContains)
+
+    return subjectMatches and fromMatches and toMatches
+
+
+def _header_matches_terms(headerValue: str, terms: list[str]) -> bool:
+    if not terms:
+        return True
+
+    normalizedTerms = [term.strip().lower() for term in terms if term.strip()]
+    if not normalizedTerms:
+        return True
+
+    return any(term in headerValue for term in normalizedTerms)
