@@ -69,13 +69,13 @@ def _build_email_body(anomalies: list[Anomaly], domain: str) -> str:
 
     for anomaly in anomalies:
         confidencePercent = int(round(anomaly.confidence * 100))
-        subjectLabel = _subject_label_for_anomaly(anomaly)
-        compactAction = _compact_action_for_anomaly(anomaly)
-        ipDetails = _compact_ip_details(anomaly)
+        anomalyLabel = _human_anomaly_label(anomaly)
+        subjectText = _human_subject_text(anomaly)
+        actionText = _human_action_text(anomaly)
         lines.append(
             f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] "
-            f"{anomaly.anomalyType} {subjectLabel}={anomaly.subject} "
-            f"{ipDetails}messages={anomaly.messageCount} action={compactAction}"
+            f"{anomalyLabel}: {subjectText} "
+            f"({anomaly.messageCount} messages). Action: {actionText}"
         )
 
     lines.extend(
@@ -89,40 +89,46 @@ def _build_email_body(anomalies: list[Anomaly], domain: str) -> str:
     return "\n".join(lines)
 
 
-def _subject_label_for_anomaly(anomaly: Anomaly) -> str:
+def _human_anomaly_label(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType == "unknown-sender":
+        return "New sender"
+    if anomaly.anomalyType == "unexpected-provider":
+        return "Unexpected provider"
+    if anomaly.anomalyType == "spf-failure":
+        return "SPF failure"
+    if anomaly.anomalyType == "dkim-failure":
+        return "DKIM failure"
+    if anomaly.anomalyType == "alignment-failure":
+        return "Alignment failure"
+    return anomaly.anomalyType
+
+
+def _human_subject_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
-        return "ip"
-    return "domain"
+        provider = anomaly.provider or "unknown"
+        rdns = anomaly.reverseDnsHostname or "unresolved"
+        return f"{anomaly.subject} via {provider}, rDNS {rdns}"
+    return anomaly.subject
 
-
-def _compact_ip_details(anomaly: Anomaly) -> str:
-    if anomaly.anomalyType not in {"unknown-sender", "unexpected-provider"}:
-        return ""
-
-    provider = anomaly.provider or "unknown"
-    rdns = anomaly.reverseDnsHostname or "unresolved"
-    return f"provider={provider} rdns={rdns} "
-
-
-def _compact_action_for_anomaly(anomaly: Anomaly) -> str:
+def _human_action_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType == "unknown-sender":
         if anomaly.riskLevel == "low":
-            return "monitor_or_allowlist"
+            return "Likely legitimate. Monitor and allowlist if expected."
         if anomaly.riskLevel == "medium":
-            return "verify_then_allowlist"
-        return "investigate_now"
+            return "Verify sender ownership and auth, then allowlist if expected."
+        return "Investigate sender now and verify SPF/DKIM context."
 
     if anomaly.anomalyType == "unexpected-provider":
         if anomaly.riskLevel == "low":
-            return "validate_provider_then_approve"
+            return "Likely new legitimate provider. Verify, then approve if expected."
         if anomaly.riskLevel == "medium":
-            return "review_provider_usage"
-        return "investigate_provider_now"
+            return "Review why this provider sends for your domain before approval."
+        return "Investigate provider by checking approvedProviders, sender setup, and SPF/DKIM alignment."
 
     if anomaly.anomalyType == "spf-failure":
-        return "check_spf_records"
+        return "Investigate SPF by checking include/redirect chain and sender IP coverage."
     if anomaly.anomalyType == "dkim-failure":
-        return "check_dkim_signing"
+        return "Investigate DKIM by checking selector keys and signing path."
     if anomaly.anomalyType == "alignment-failure":
-        return "urgent_auth_alignment_check"
-    return "review"
+        return "Urgent: investigate DMARC/SPF/DKIM alignment and possible spoofing."
+    return "Review this anomaly."
