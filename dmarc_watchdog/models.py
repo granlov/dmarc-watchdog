@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -20,3 +20,13 @@ class ParsedRecord:
 class Anomaly:
     anomalyType: str
     message: str
+    subject: str = ""
+    messageCount: int = 0
+    provider: str = ""
+    reverseDnsHostname: str = ""
+    authSummary: str = ""
+    riskLevel: str = "medium"
+    confidence: float = 0.5
+    whyThisAppeared: str = ""
+    evidence: list[str] = field(default_factory=list)
+    recommendation: str = ""

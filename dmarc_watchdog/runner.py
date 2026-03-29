@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from .alerter import send_alert_email
 from .analyzer import detect_anomalies
+from .anomaly_explainer import enrich_anomaly_guidance
 from .config import AppConfig, load_allowlist
 from .dmarc_parser import extract_xml_documents, parse_dmarc_xml
 from .ingest import (
@@ -44,6 +45,12 @@ def run_watchdog(appConfig: AppConfig) -> int:
             alertOnSpfFailure=appConfig.rules.alertOnSpfFailure,
             alertOnDkimFailure=appConfig.rules.alertOnDkimFailure,
             alertOnAlignmentFailure=appConfig.rules.alertOnAlignmentFailure,
+        )
+        enrich_anomaly_guidance(
+            anomalies=anomalies,
+            parsedRecords=parsedRecords,
+            allowlist=allowlist,
+            approvedProviders=appConfig.senderIdentity.approvedProviders,
         )
 
         _print_summary(parsedRecords, anomalies)
@@ -127,4 +134,72 @@ def _print_summary(parsedRecords: list[ParsedRecord], anomalies: list[Anomaly]) 
 
     print("Issues detected:")
     for anomaly in anomalies:
-        print(f"- {anomaly.message}")
+        headerText = _human_header_text(anomaly)
+        infoText = _human_info_text(anomaly)
+        actionText = _human_action_text(anomaly)
+        print(f"- {headerText}")
+        print(f"  Info: {infoText}")
+        print(f"  Action: {actionText}")
+
+
+def _human_anomaly_label(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType == "unknown-sender":
+        return "New sender"
+    if anomaly.anomalyType == "unexpected-provider":
+        return "Unexpected provider"
+    if anomaly.anomalyType == "spf-failure":
+        return "SPF failure"
+    if anomaly.anomalyType == "dkim-failure":
+        return "DKIM failure"
+    if anomaly.anomalyType == "alignment-failure":
+        return "Alignment failure"
+    return anomaly.anomalyType
+
+
+def _human_header_text(anomaly: Anomaly) -> str:
+    confidencePercent = int(round(anomaly.confidence * 100))
+    label = _human_anomaly_label(anomaly)
+
+    if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
+        rdns = anomaly.reverseDnsHostname or "unresolved"
+        return f"[{anomaly.riskLevel.upper()} {confidencePercent}%] {label}: {anomaly.subject} ({rdns})"
+
+    return f"[{anomaly.riskLevel.upper()} {confidencePercent}%] {label}: {anomaly.subject}"
+
+
+def _human_info_text(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
+        provider = anomaly.provider or "unknown"
+        if anomaly.authSummary:
+            return f"{anomaly.messageCount} messages; provider {provider}; auth {anomaly.authSummary}."
+        return f"{anomaly.messageCount} messages; provider {provider}."
+
+    if anomaly.authSummary:
+        return f"{anomaly.messageCount} messages; auth {anomaly.authSummary}."
+    return f"{anomaly.messageCount} messages."
+
+def _human_action_text(anomaly: Anomaly) -> str:
+    if anomaly.recommendation:
+        return anomaly.recommendation
+
+    if anomaly.anomalyType == "unknown-sender":
+        if anomaly.riskLevel == "low":
+            return "Likely legitimate. Monitor and allowlist if expected."
+        if anomaly.riskLevel == "medium":
+            return "Verify sender ownership and auth, then allowlist if expected."
+        return "Investigate sender now and verify SPF/DKIM context."
+
+    if anomaly.anomalyType == "unexpected-provider":
+        if anomaly.riskLevel == "low":
+            return "Likely new legitimate provider. Verify, then approve if expected."
+        if anomaly.riskLevel == "medium":
+            return "Review why this provider sends for your domain before approval."
+        return "Investigate provider by checking approvedProviders, sender setup, and SPF/DKIM alignment."
+
+    if anomaly.anomalyType == "spf-failure":
+        return "Investigate SPF by checking include/redirect chain and sender IP coverage."
+    if anomaly.anomalyType == "dkim-failure":
+        return "Investigate DKIM by checking selector keys and signing path."
+    if anomaly.anomalyType == "alignment-failure":
+        return "Urgent: investigate DMARC/SPF/DKIM alignment and possible spoofing."
+    return "Review this anomaly."
