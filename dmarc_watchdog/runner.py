@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from .alerter import send_alert_email
 from .analyzer import detect_anomalies
+from .anomaly_explainer import enrich_anomaly_guidance
 from .config import AppConfig, load_allowlist
 from .dmarc_parser import extract_xml_documents, parse_dmarc_xml
 from .ingest import (
@@ -44,6 +45,12 @@ def run_watchdog(appConfig: AppConfig) -> int:
             alertOnSpfFailure=appConfig.rules.alertOnSpfFailure,
             alertOnDkimFailure=appConfig.rules.alertOnDkimFailure,
             alertOnAlignmentFailure=appConfig.rules.alertOnAlignmentFailure,
+        )
+        enrich_anomaly_guidance(
+            anomalies=anomalies,
+            parsedRecords=parsedRecords,
+            allowlist=allowlist,
+            approvedProviders=appConfig.senderIdentity.approvedProviders,
         )
 
         _print_summary(parsedRecords, anomalies)
@@ -127,4 +134,11 @@ def _print_summary(parsedRecords: list[ParsedRecord], anomalies: list[Anomaly]) 
 
     print("Issues detected:")
     for anomaly in anomalies:
-        print(f"- {anomaly.message}")
+        confidencePercent = int(round(anomaly.confidence * 100))
+        print(f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] {anomaly.message}")
+        if anomaly.whyThisAppeared:
+            print(f"  Why: {anomaly.whyThisAppeared}")
+        if anomaly.evidence:
+            print(f"  Evidence: {'; '.join(anomaly.evidence)}")
+        if anomaly.recommendation:
+            print(f"  Action: {anomaly.recommendation}")

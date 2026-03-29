@@ -49,6 +49,18 @@ Configure SMTP to get notified when anomalies are detected:
 
 Leave `enabled: false` (default) to disable email alerts.
 
+## Guidance Output
+
+When a sender IP appears, the output now includes:
+
+- `LOW`, `MEDIUM`, or `HIGH` risk level
+- confidence percentage
+- why it appeared
+- supporting evidence (provider, rDNS, SPF/DKIM context)
+- recommended action
+
+This helps distinguish likely legitimate new senders from items that need immediate investigation.
+
 ## Public Repo Safety
 
 Never commit real credentials or mail content. Sensitive files are gitignored by pattern:

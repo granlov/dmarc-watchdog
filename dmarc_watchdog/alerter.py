@@ -68,7 +68,15 @@ def _build_email_body(anomalies: list[Anomaly], domain: str) -> str:
     ]
 
     for anomaly in anomalies:
-        lines.append(f"• {anomaly.severity.upper()}: {anomaly.description}")
+        confidencePercent = int(round(anomaly.confidence * 100))
+        lines.append(f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] {anomaly.message}")
+        if anomaly.whyThisAppeared:
+            lines.append(f"  Why: {anomaly.whyThisAppeared}")
+        if anomaly.evidence:
+            lines.append(f"  Evidence: {'; '.join(anomaly.evidence)}")
+        if anomaly.recommendation:
+            lines.append(f"  Action: {anomaly.recommendation}")
+        lines.append("")
 
     lines.extend(
         [

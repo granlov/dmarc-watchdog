@@ -77,7 +77,14 @@ def _build_anomalies(
 ) -> list[Anomaly]:
     items: list[Anomaly] = []
     for key, count in sorted(countsByKey.items(), key=lambda item: item[1], reverse=True):
-        items.append(Anomaly(anomalyType=anomalyType, message=f"{label}: {key} ({count} messages)"))
+        items.append(
+            Anomaly(
+                anomalyType=anomalyType,
+                message=f"{label}: {key} ({count} messages)",
+                subject=key,
+                messageCount=count,
+            )
+        )
     return items
 
 
@@ -91,5 +98,12 @@ def _build_sender_anomalies(
             f"New sender: {sourceIp} (provider: {senderProvider}, rdns: {reverseDnsHostname})"
             f" ({count} messages)"
         )
-        items.append(Anomaly(anomalyType="unknown-sender", message=message))
+        items.append(
+            Anomaly(
+                anomalyType="unknown-sender",
+                message=message,
+                subject=sourceIp,
+                messageCount=count,
+            )
+        )
     return items
