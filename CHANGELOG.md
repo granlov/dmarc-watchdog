@@ -4,6 +4,10 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+### Changed (Unreleased)
+
+- IMAP-ingest ignorerar nu unread/read-status och filtrerar istället på mailheaders (subject/from/to). Deduplicering via state-hash är fortsatt spärr mot dubletter.
+
 ## [1.0.0] - 2026-03-29
 
 ### Added

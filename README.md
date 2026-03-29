@@ -14,6 +14,7 @@ The MVP focuses on deterministic analysis, low noise, and near-zero cost:
 Included:
 
 - ingest DMARC report emails from IMAP, or from local files for safe dry runs
+- IMAP filtering uses headers (subject/from/to) and ignores unread/read status
 - extract XML from xml, gz, and zip attachments
 - parse aggregate records (source IP, header_from, SPF, DKIM, disposition, count)
 - detect anomalies with deterministic rules
@@ -105,8 +106,11 @@ Default mode is `local-files`, reading from `samples/reports/`.
 - copy `config/config.example.json` to `config/config.local.json`
 - copy `config/allowlist.example.json` to `config/allowlist.local.json`
 - set `runtime.mode` to `imap`
+- tune IMAP header filters (`filterSubjectContains`, `filterFromContains`, `filterToContains`)
 - add IMAP credentials locally
 - run with `--config config/config.local.json`
+
+Unread/read status is intentionally ignored. Replay protection is handled by attachment-hash state.
 
 Credential timing:
 

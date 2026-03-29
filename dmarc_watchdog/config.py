@@ -11,7 +11,10 @@ class ImapConfig:
     username: str
     password: str
     mailbox: str
-    searchCriterion: str
+    filterSubjectContains: list[str]
+    filterFromContains: list[str]
+    filterToContains: list[str]
+    legacySearchCriterion: str
 
 
 @dataclass
@@ -66,7 +69,22 @@ def load_app_config(configFilePath: str) -> AppConfig:
 
     runtime = RuntimeConfig(**parsedJson["runtime"])
     paths = PathConfig(**parsedJson["paths"])
-    imap = ImapConfig(**parsedJson["imap"])
+    parsedImap = parsedJson["imap"]
+    imap = ImapConfig(
+        host=parsedImap["host"],
+        port=parsedImap["port"],
+        username=parsedImap["username"],
+        password=parsedImap["password"],
+        mailbox=parsedImap["mailbox"],
+        filterSubjectContains=parsedImap.get(
+            "filterSubjectContains",
+            ["dmarc", "aggregate"],
+        ),
+        filterFromContains=parsedImap.get("filterFromContains", []),
+        filterToContains=parsedImap.get("filterToContains", []),
+        # Backward compatibility only. Runtime no longer depends on unread state.
+        legacySearchCriterion=parsedImap.get("searchCriterion", "UNSEEN"),
+    )
 
     parsedRules = parsedJson.get("rules", {})
     rules = RuleConfig(

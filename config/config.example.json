@@ -14,7 +14,12 @@
     "username": "replace-me@example.com",
     "password": "replace-me",
     "mailbox": "INBOX",
-    "searchCriterion": "UNSEEN"
+    "filterSubjectContains": [
+      "dmarc",
+      "aggregate"
+    ],
+    "filterFromContains": [],
+    "filterToContains": []
   },
   "rules": {
     "alertOnUnknownSender": true,

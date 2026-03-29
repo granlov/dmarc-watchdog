@@ -68,7 +68,9 @@ def _load_mail_payloads(appConfig: AppConfig) -> list[MailPayload]:
             username=appConfig.imap.username,
             password=appConfig.imap.password,
             mailbox=appConfig.imap.mailbox,
-            searchCriterion=appConfig.imap.searchCriterion,
+            filterSubjectContains=appConfig.imap.filterSubjectContains,
+            filterFromContains=appConfig.imap.filterFromContains,
+            filterToContains=appConfig.imap.filterToContains,
             lookbackHours=appConfig.runtime.lookbackHours,
         )
 
