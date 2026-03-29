@@ -55,6 +55,7 @@ def _explain_unknown_sender(
         return
 
     sample = records[0]
+    senderDomain = sample.headerFromDomain
     provider = sample.senderProvider
     providerLower = provider.lower()
     rdns = sample.reverseDnsHostname
@@ -99,11 +100,20 @@ def _explain_unknown_sender(
     _finalize_risk(anomaly, score, evidence)
 
     if anomaly.riskLevel == "low":
-        anomaly.recommendation = "Likely legitimate. Monitor and allowlist if this sender is expected."
+        anomaly.recommendation = (
+            f"Likely legitimate redirect. If expected, add this IP to allowlist. "
+            f"Search: \"{anomaly.subject} {rdns}\"."
+        )
     elif anomaly.riskLevel == "medium":
-        anomaly.recommendation = "Review sender context. Allowlist only after confirming ownership and authentication."
+        anomaly.recommendation = (
+            f"Confirm this sender is expected for {senderDomain}, then allowlist IP if valid. "
+            f"Search: \"{anomaly.subject} {rdns} {senderDomain}\"."
+        )
     else:
-        anomaly.recommendation = "Investigate now. Verify sender system, SPF/DKIM setup, and provider expectations."
+        anomaly.recommendation = (
+            f"Investigate now. Verify sender setup and SPF/DKIM for {senderDomain}. "
+            f"Search: \"{anomaly.subject} {rdns} DMARC SPF DKIM\"."
+        )
 
 
 def _explain_unexpected_provider(
@@ -117,9 +127,14 @@ def _explain_unexpected_provider(
     if not records:
         anomaly.whyThisAppeared = "Sender provider is outside approved provider list"
         _finalize_risk(anomaly, score, ["No parsed records found for this IP"])
-        anomaly.recommendation = "Investigate sender and add provider only after verification."
+        anomaly.recommendation = (
+            f"Check this sender before approval. Search: \"{anomaly.subject} mail server\". "
+            "Add provider only if confirmed legitimate."
+        )
         return
 
+    providerDisplay = records[0].senderProvider
+    senderDomain = records[0].headerFromDomain
     providerName = records[0].senderProvider.lower()
     rdns = records[0].reverseDnsHostname
 
@@ -162,11 +177,20 @@ def _explain_unexpected_provider(
     _finalize_risk(anomaly, score, evidence)
 
     if anomaly.riskLevel == "low":
-        anomaly.recommendation = "Likely new legitimate provider. Add to approvedProviders after verification."
+        anomaly.recommendation = (
+            f"Likely legitimate provider change. If expected, add {providerDisplay} to approvedProviders. "
+            f"Search: \"{anomaly.subject} {rdns} {senderDomain}\"."
+        )
     elif anomaly.riskLevel == "medium":
-        anomaly.recommendation = "Validate whether this provider should send for your domain."
+        anomaly.recommendation = (
+            f"Confirm whether {providerDisplay} should send for {senderDomain}. "
+            f"Search: \"{senderDomain} DMARC report {providerDisplay} {anomaly.subject}\"."
+        )
     else:
-        anomaly.recommendation = "Potential abuse or misconfiguration. Investigate provider origin immediately."
+        anomaly.recommendation = (
+            f"Potential abuse or misconfiguration. Investigate provider now. "
+            f"Search: \"{anomaly.subject} {rdns} abuse\" and verify sender settings for {senderDomain}."
+        )
 
 
 def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authType: str) -> None:
@@ -194,7 +218,10 @@ def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authTyp
             score += 10
             evidence.append("DKIM also has failures")
         evidence.append(_failure_summary_text(failedResults, "SPF"))
-        anomaly.recommendation = "Check SPF include/redirect chain and sending IP coverage."
+        anomaly.recommendation = (
+            f"Fix SPF for {anomaly.subject}: verify include/redirect and sender IP coverage. "
+            f"Search: \"{anomaly.subject} SPF fail DMARC\"."
+        )
     else:
         failedRecords = [record for record in records if record.dkimResult.lower() != "pass"]
         failedResults = [record.dkimResult.lower() for record in failedRecords]
@@ -216,7 +243,10 @@ def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authTyp
             score += 10
             evidence.append("SPF also has failures")
         evidence.append(_failure_summary_text(failedResults, "DKIM"))
-        anomaly.recommendation = "Check DKIM selector keys and signing path for this domain."
+        anomaly.recommendation = (
+            f"Fix DKIM for {anomaly.subject}: verify selector keys and signing path. "
+            f"Search: \"{anomaly.subject} DKIM fail DMARC\"."
+        )
 
     evidence.append(f"Affected domain: {anomaly.subject}")
     _finalize_risk(anomaly, score, evidence)
@@ -231,7 +261,10 @@ def _explain_alignment_failure(anomaly: Anomaly, records: list[ParsedRecord]) ->
 
     anomaly.whyThisAppeared = "Both SPF and DKIM failed for the same aligned sending context"
     _finalize_risk(anomaly, score, evidence)
-    anomaly.recommendation = "High priority: verify DMARC/SPF/DKIM DNS setup and investigate potential spoofing."
+    anomaly.recommendation = (
+        f"High priority: fix SPF+DKIM alignment for {anomaly.subject}. "
+        f"Search: \"{anomaly.subject} DMARC alignment fail\"."
+    )
 
 
 def _all_spf_pass(records: list[ParsedRecord]) -> bool:

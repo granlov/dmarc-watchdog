@@ -170,12 +170,14 @@ def _human_header_text(anomaly: Anomaly) -> str:
 def _human_info_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
         provider = anomaly.provider or "unknown"
-        rdns = anomaly.reverseDnsHostname or "unresolved"
-        return f"{anomaly.messageCount} messages; provider {provider}; rDNS {rdns}."
+        return f"{anomaly.messageCount} messages; provider {provider}."
 
     return f"{anomaly.messageCount} messages."
 
 def _human_action_text(anomaly: Anomaly) -> str:
+    if anomaly.recommendation:
+        return anomaly.recommendation
+
     if anomaly.anomalyType == "unknown-sender":
         if anomaly.riskLevel == "low":
             return "Likely legitimate. Monitor and allowlist if expected."
