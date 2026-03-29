@@ -46,12 +46,24 @@ class SenderIdentityConfig:
 
 
 @dataclass
+class AlertConfig:
+    enabled: bool
+    smtpHost: str
+    smtpPort: int
+    smtpUsername: str
+    smtpPassword: str
+    fromAddress: str
+    toAddresses: list[str]
+
+
+@dataclass
 class AppConfig:
     runtime: RuntimeConfig
     paths: PathConfig
     imap: ImapConfig
     rules: RuleConfig
     senderIdentity: SenderIdentityConfig
+    alerts: AlertConfig
 
 
 class ConfigurationError(Exception):
@@ -102,12 +114,24 @@ def load_app_config(configFilePath: str) -> AppConfig:
         providerHostnamePatterns=providerHostnamePatterns,
     )
 
+    parsedAlerts = parsedJson.get("alerts", {})
+    alerts = AlertConfig(
+        enabled=parsedAlerts.get("enabled", False),
+        smtpHost=parsedAlerts.get("smtpHost", ""),
+        smtpPort=parsedAlerts.get("smtpPort", 587),
+        smtpUsername=parsedAlerts.get("smtpUsername", ""),
+        smtpPassword=parsedAlerts.get("smtpPassword", ""),
+        fromAddress=parsedAlerts.get("fromAddress", ""),
+        toAddresses=parsedAlerts.get("toAddresses", []),
+    )
+
     return AppConfig(
         runtime=runtime,
         paths=paths,
         imap=imap,
         rules=rules,
         senderIdentity=senderIdentity,
+        alerts=alerts,
     )
 
 
