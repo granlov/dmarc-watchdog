@@ -1,0 +1,16 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Local configuration and secrets
+.env
+config/config.local.json
+config/allowlist.local.json
+
+# Runtime state
+state/
+
+# Local sample inputs
+samples/reports/

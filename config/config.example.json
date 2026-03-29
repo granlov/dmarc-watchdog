@@ -1,0 +1,48 @@
+{
+  "runtime": {
+    "mode": "local-files",
+    "lookbackHours": 24
+  },
+  "paths": {
+    "stateFile": "state/state.json",
+    "allowlistFile": "config/allowlist.local.json",
+    "localReportDirectory": "samples/reports"
+  },
+  "imap": {
+    "host": "imap.example.com",
+    "port": 993,
+    "username": "replace-me@example.com",
+    "password": "replace-me",
+    "mailbox": "INBOX",
+    "searchCriterion": "UNSEEN"
+  },
+  "rules": {
+    "alertOnUnknownSender": true,
+    "alertOnUnexpectedProvider": true,
+    "alertOnSpfFailure": true,
+    "alertOnDkimFailure": true,
+    "alertOnAlignmentFailure": true
+  },
+  "senderIdentity": {
+    "enableReverseDns": true,
+    "approvedProviders": [
+      "one.com",
+      "shopify",
+      "aws ses"
+    ],
+    "providerHostnamePatterns": {
+      "one.com": [
+        "one.com"
+      ],
+      "shopify": [
+        "shopify",
+        "sendgrid.net"
+      ],
+      "aws ses": [
+        "amazonses.com",
+        "smtp-out",
+        "amazonaws.com"
+      ]
+    }
+  }
+}
