@@ -26,7 +26,7 @@ def enrich_anomaly_guidance(
         elif anomaly.anomalyType == "unexpected-provider":
             _explain_unexpected_provider(
                 anomaly,
-                parsedRecords,
+                recordsByIp.get(anomaly.subject, []),
                 approvedProviderSet,
             )
         elif anomaly.anomalyType == "spf-failure":
@@ -108,14 +108,19 @@ def _explain_unknown_sender(
 
 def _explain_unexpected_provider(
     anomaly: Anomaly,
-    parsedRecords: list[ParsedRecord],
+    records: list[ParsedRecord],
     approvedProviderSet: set[str],
 ) -> None:
     score = 70
     evidence: list[str] = []
 
-    providerName = anomaly.subject.split(" (", 1)[0].strip().lower()
-    matchingRecords = [record for record in parsedRecords if record.senderProvider.lower() == providerName]
+    if not records:
+        anomaly.whyThisAppeared = "Sender provider is outside approved provider list"
+        _finalize_risk(anomaly, score, ["No parsed records found for this IP"])
+        anomaly.recommendation = "Investigate sender and add provider only after verification."
+        return
+
+    providerName = records[0].senderProvider.lower()
 
     if providerName in approvedProviderSet:
         score -= 35
@@ -123,7 +128,7 @@ def _explain_unexpected_provider(
     else:
         evidence.append("Provider is not in approvedProviders")
 
-    if matchingRecords and _all_spf_pass(matchingRecords) and _all_dkim_pass(matchingRecords):
+    if _all_spf_pass(records) and _all_dkim_pass(records):
         score -= 10
         evidence.append("Authentication mostly passes despite provider mismatch")
     else:

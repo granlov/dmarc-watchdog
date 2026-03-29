@@ -135,10 +135,40 @@ def _print_summary(parsedRecords: list[ParsedRecord], anomalies: list[Anomaly]) 
     print("Issues detected:")
     for anomaly in anomalies:
         confidencePercent = int(round(anomaly.confidence * 100))
-        print(f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] {anomaly.message}")
-        if anomaly.whyThisAppeared:
-            print(f"  Why: {anomaly.whyThisAppeared}")
-        if anomaly.evidence:
-            print(f"  Evidence: {'; '.join(anomaly.evidence)}")
-        if anomaly.recommendation:
-            print(f"  Action: {anomaly.recommendation}")
+        subjectLabel = _subject_label_for_anomaly(anomaly)
+        compactAction = _compact_action_for_anomaly(anomaly)
+        print(
+            f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] "
+            f"{anomaly.anomalyType} {subjectLabel}={anomaly.subject} "
+            f"messages={anomaly.messageCount} action={compactAction}"
+        )
+
+
+def _subject_label_for_anomaly(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
+        return "ip"
+    return "domain"
+
+
+def _compact_action_for_anomaly(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType == "unknown-sender":
+        if anomaly.riskLevel == "low":
+            return "monitor_or_allowlist"
+        if anomaly.riskLevel == "medium":
+            return "verify_then_allowlist"
+        return "investigate_now"
+
+    if anomaly.anomalyType == "unexpected-provider":
+        if anomaly.riskLevel == "low":
+            return "validate_provider_then_approve"
+        if anomaly.riskLevel == "medium":
+            return "review_provider_usage"
+        return "investigate_provider_now"
+
+    if anomaly.anomalyType == "spf-failure":
+        return "check_spf_records"
+    if anomaly.anomalyType == "dkim-failure":
+        return "check_dkim_signing"
+    if anomaly.anomalyType == "alignment-failure":
+        return "urgent_auth_alignment_check"
+    return "review"

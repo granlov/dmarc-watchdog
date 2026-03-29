@@ -16,7 +16,7 @@ def detect_anomalies(
     anomalies: list[Anomaly] = []
 
     unknownSenderCounts: dict[tuple[str, str, str], int] = defaultdict(int)
-    unexpectedProviderCounts: dict[str, int] = defaultdict(int)
+    unexpectedProviderCounts: dict[tuple[str, str, str], int] = defaultdict(int)
     spfFailureCounts: dict[str, int] = defaultdict(int)
     dkimFailureCounts: dict[str, int] = defaultdict(int)
     alignmentFailureCounts: dict[str, int] = defaultdict(int)
@@ -40,8 +40,13 @@ def detect_anomalies(
 
         if alertOnUnexpectedProvider:
             if record.senderProvider.lower() not in approvedProviderSet:
-                providerLabel = f"{record.senderProvider} ({record.reverseDnsHostname})"
-                unexpectedProviderCounts[providerLabel] += record.messageCount
+                unexpectedProviderCounts[
+                    (
+                        record.sourceIp,
+                        record.senderProvider,
+                        record.reverseDnsHostname,
+                    )
+                ] += record.messageCount
 
         if alertOnSpfFailure and record.spfResult.lower() != "pass":
             spfFailureCounts[record.headerFromDomain] += record.messageCount
@@ -56,13 +61,7 @@ def detect_anomalies(
                 alignmentFailureCounts[record.headerFromDomain] += record.messageCount
 
     anomalies.extend(_build_sender_anomalies(unknownSenderCounts))
-    anomalies.extend(
-        _build_anomalies(
-            "unexpected-provider",
-            "Unexpected provider",
-            unexpectedProviderCounts,
-        )
-    )
+    anomalies.extend(_build_unexpected_provider_anomalies(unexpectedProviderCounts))
     anomalies.extend(_build_anomalies("spf-failure", "SPF fail", spfFailureCounts))
     anomalies.extend(_build_anomalies("dkim-failure", "DKIM fail", dkimFailureCounts))
     anomalies.extend(_build_anomalies("alignment-failure", "Alignment fail", alignmentFailureCounts))
@@ -101,6 +100,27 @@ def _build_sender_anomalies(
         items.append(
             Anomaly(
                 anomalyType="unknown-sender",
+                message=message,
+                subject=sourceIp,
+                messageCount=count,
+            )
+        )
+    return items
+
+
+def _build_unexpected_provider_anomalies(
+    providerCounts: dict[tuple[str, str, str], int],
+) -> list[Anomaly]:
+    items: list[Anomaly] = []
+    sortedItems = sorted(providerCounts.items(), key=lambda item: item[1], reverse=True)
+    for (sourceIp, senderProvider, reverseDnsHostname), count in sortedItems:
+        message = (
+            f"Unexpected provider: {sourceIp} (provider: {senderProvider}, rdns: {reverseDnsHostname})"
+            f" ({count} messages)"
+        )
+        items.append(
+            Anomaly(
+                anomalyType="unexpected-provider",
                 message=message,
                 subject=sourceIp,
                 messageCount=count,
