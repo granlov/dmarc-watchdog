@@ -170,8 +170,12 @@ def _human_header_text(anomaly: Anomaly) -> str:
 def _human_info_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
         provider = anomaly.provider or "unknown"
+        if anomaly.authSummary:
+            return f"{anomaly.messageCount} messages; provider {provider}; auth {anomaly.authSummary}."
         return f"{anomaly.messageCount} messages; provider {provider}."
 
+    if anomaly.authSummary:
+        return f"{anomaly.messageCount} messages; auth {anomaly.authSummary}."
     return f"{anomaly.messageCount} messages."
 
 def _human_action_text(anomaly: Anomaly) -> str:

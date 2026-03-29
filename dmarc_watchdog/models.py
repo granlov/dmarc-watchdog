@@ -24,6 +24,7 @@ class Anomaly:
     messageCount: int = 0
     provider: str = ""
     reverseDnsHostname: str = ""
+    authSummary: str = ""
     riskLevel: str = "medium"
     confidence: float = 0.5
     whyThisAppeared: str = ""

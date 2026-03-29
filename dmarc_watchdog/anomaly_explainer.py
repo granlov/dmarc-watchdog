@@ -59,6 +59,7 @@ def _explain_unknown_sender(
     provider = sample.senderProvider
     providerLower = provider.lower()
     rdns = sample.reverseDnsHostname
+    anomaly.authSummary = _auth_summary(records)
 
     if anomaly.subject in allowedIps:
         score -= 35
@@ -127,6 +128,7 @@ def _explain_unexpected_provider(
     senderDomain = records[0].headerFromDomain
     providerName = records[0].senderProvider.lower()
     rdns = records[0].reverseDnsHostname
+    anomaly.authSummary = _auth_summary(records)
 
     if providerName in approvedProviderSet:
         score -= 30
@@ -181,6 +183,7 @@ def _explain_unexpected_provider(
 def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authType: str) -> None:
     score = 45
     evidence: list[str] = []
+    anomaly.authSummary = _auth_summary(records)
 
     if authType == "spf":
         failedRecords = [record for record in records if record.spfResult.lower() != "pass"]
@@ -236,6 +239,7 @@ def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authTyp
 def _explain_alignment_failure(anomaly: Anomaly, records: list[ParsedRecord]) -> None:
     score = 80
     evidence = [f"Affected domain: {anomaly.subject}"]
+    anomaly.authSummary = _auth_summary(records)
 
     if records:
         evidence.append("Both SPF and DKIM are non-pass for matching records")
@@ -290,6 +294,22 @@ def _failure_summary_text(failedResults: list[str], label: str) -> str:
 
     uniqueResults = sorted(set(failedResults))
     return f"{label} results: {', '.join(uniqueResults)}"
+
+
+def _auth_summary(records: list[ParsedRecord]) -> str:
+    if not records:
+        return "SPF unknown, DKIM unknown"
+
+    spfResults = [record.spfResult.lower() for record in records]
+    dkimResults = [record.dkimResult.lower() for record in records]
+    return f"SPF {_aggregate_result(spfResults)}, DKIM {_aggregate_result(dkimResults)}"
+
+
+def _aggregate_result(results: list[str]) -> str:
+    uniqueResults = sorted(set(results))
+    if len(uniqueResults) == 1:
+        return uniqueResults[0]
+    return "mixed"
 
 
 def _has_alignment_failure(records: list[ParsedRecord]) -> bool:
