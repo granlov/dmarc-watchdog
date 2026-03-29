@@ -72,7 +72,6 @@ def _load_mail_payloads(appConfig: AppConfig, state: dict) -> list[MailPayload]:
             filterSubjectContains=appConfig.imap.filterSubjectContains,
             filterFromContains=appConfig.imap.filterFromContains,
             filterToContains=appConfig.imap.filterToContains,
-            lookbackHours=appConfig.runtime.lookbackHours,
             sinceUtc=lastRunUtc,
         )
 

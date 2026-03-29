@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 import email
 import imaplib
@@ -52,21 +52,19 @@ def fetch_mail_payloads_from_imap(
     filterSubjectContains: list[str],
     filterFromContains: list[str],
     filterToContains: list[str],
-    lookbackHours: int,
     sinceUtc: datetime | None = None,
 ) -> list[MailPayload]:
-    nowUtc = datetime.now(timezone.utc)
-    if sinceUtc is not None:
-        sinceDate = sinceUtc.strftime("%d-%b-%Y")
-    else:
-        sinceDate = (nowUtc - timedelta(hours=lookbackHours)).strftime("%d-%b-%Y")
-
     with imaplib.IMAP4_SSL(host=host, port=port) as mailboxConnection:
         mailboxConnection.login(username, password)
         mailboxConnection.select(mailbox)
 
-        # Ignore unread/read status and search by time window only.
-        status, messageIdBlocks = mailboxConnection.search(None, f'(SINCE "{sinceDate}")')
+        if sinceUtc is not None:
+            searchCriterion = f'(SINCE "{sinceUtc.strftime("%d-%b-%Y")}")'
+        else:
+            searchCriterion = "ALL"
+
+        # Ignore unread/read status. Deduplication is handled by attachment-hash state.
+        status, messageIdBlocks = mailboxConnection.search(None, searchCriterion)
         if status != "OK":
             return []
 
