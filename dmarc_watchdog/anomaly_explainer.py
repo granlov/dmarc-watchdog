@@ -111,7 +111,7 @@ def _explain_unexpected_provider(
     records: list[ParsedRecord],
     approvedProviderSet: set[str],
 ) -> None:
-    score = 70
+    score = 55
     evidence: list[str] = []
 
     if not records:
@@ -121,19 +121,42 @@ def _explain_unexpected_provider(
         return
 
     providerName = records[0].senderProvider.lower()
+    rdns = records[0].reverseDnsHostname
 
     if providerName in approvedProviderSet:
-        score -= 35
+        score -= 30
         evidence.append("Provider is in approvedProviders but still flagged (check naming consistency)")
     else:
         evidence.append("Provider is not in approvedProviders")
 
+    if providerName == "unknown":
+        score += 20
+        evidence.append("Provider classification is unknown")
+
+    if rdns == "unresolved":
+        score += 10
+        evidence.append("rDNS did not resolve")
+
     if _all_spf_pass(records) and _all_dkim_pass(records):
-        score -= 10
+        score -= 25
         evidence.append("Authentication mostly passes despite provider mismatch")
     else:
-        score += 10
+        score += 15
         evidence.append("Authentication failures present with unexpected provider")
+
+    if anomaly.messageCount <= 2:
+        score -= 5
+        evidence.append("Very low message volume")
+    elif anomaly.messageCount >= 20:
+        score += 10
+        evidence.append("Sustained message volume from unexpected provider")
+
+    hasAlignmentFailure = _has_alignment_failure(records)
+    if providerName != "unknown" and rdns != "unresolved" and not hasAlignmentFailure:
+        # Known provider with resolvable rDNS and no SPF+DKIM double-failure is often
+        # forwarding/redirect behavior, not necessarily abuse. Keep this at most medium.
+        score = min(score, 65)
+        evidence.append("No SPF+DKIM double-failure for this provider/IP")
 
     anomaly.whyThisAppeared = "Sender provider classification is outside approved provider list"
     _finalize_risk(anomaly, score, evidence)
@@ -147,26 +170,52 @@ def _explain_unexpected_provider(
 
 
 def _explain_auth_failure(anomaly: Anomaly, records: list[ParsedRecord], authType: str) -> None:
-    score = 60
+    score = 45
     evidence: list[str] = []
 
     if authType == "spf":
+        failedRecords = [record for record in records if record.spfResult.lower() != "pass"]
+        failedResults = [record.spfResult.lower() for record in failedRecords]
+        failureWeight = _failure_weight(failedResults)
+
+        score += failureWeight
+        if anomaly.messageCount >= 10:
+            score += 10
+            evidence.append("Failure volume is elevated (10+ messages)")
+        if anomaly.messageCount >= 50:
+            score += 10
+            evidence.append("Failure volume is sustained (50+ messages)")
+
         anomaly.whyThisAppeared = "SPF evaluation returned non-pass for one or more records"
         if _all_dkim_pass(records):
-            score -= 15
+            score -= 10
             evidence.append("DKIM still passes, reducing spoofing likelihood")
         else:
             score += 10
             evidence.append("DKIM also has failures")
+        evidence.append(_failure_summary_text(failedResults, "SPF"))
         anomaly.recommendation = "Check SPF include/redirect chain and sending IP coverage."
     else:
+        failedRecords = [record for record in records if record.dkimResult.lower() != "pass"]
+        failedResults = [record.dkimResult.lower() for record in failedRecords]
+        failureWeight = _failure_weight(failedResults)
+
+        score += failureWeight
+        if anomaly.messageCount >= 10:
+            score += 10
+            evidence.append("Failure volume is elevated (10+ messages)")
+        if anomaly.messageCount >= 50:
+            score += 10
+            evidence.append("Failure volume is sustained (50+ messages)")
+
         anomaly.whyThisAppeared = "DKIM evaluation returned non-pass for one or more records"
         if _all_spf_pass(records):
-            score -= 15
+            score -= 10
             evidence.append("SPF still passes, reducing spoofing likelihood")
         else:
             score += 10
             evidence.append("SPF also has failures")
+        evidence.append(_failure_summary_text(failedResults, "DKIM"))
         anomaly.recommendation = "Check DKIM selector keys and signing path for this domain."
 
     evidence.append(f"Affected domain: {anomaly.subject}")
@@ -208,3 +257,34 @@ def _finalize_risk(anomaly: Anomaly, rawScore: int, evidence: list[str]) -> None
         anomaly.riskLevel = "medium"
     else:
         anomaly.riskLevel = "high"
+
+
+def _failure_weight(failedResults: list[str]) -> int:
+    if not failedResults:
+        return 0
+
+    severeResults = {"fail", "permerror"}
+    transientResults = {"temperror"}
+
+    if any(result in severeResults for result in failedResults):
+        return 25
+    if any(result in transientResults for result in failedResults):
+        return 15
+    return 5
+
+
+def _failure_summary_text(failedResults: list[str], label: str) -> str:
+    if not failedResults:
+        return f"{label} non-pass results detected"
+
+    uniqueResults = sorted(set(failedResults))
+    return f"{label} results: {', '.join(uniqueResults)}"
+
+
+def _has_alignment_failure(records: list[ParsedRecord]) -> bool:
+    for record in records:
+        spfFailed = record.spfResult.lower() != "pass"
+        dkimFailed = record.dkimResult.lower() != "pass"
+        if spfFailed and dkimFailed:
+            return True
+    return False
