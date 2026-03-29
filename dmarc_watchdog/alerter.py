@@ -71,10 +71,11 @@ def _build_email_body(anomalies: list[Anomaly], domain: str) -> str:
         confidencePercent = int(round(anomaly.confidence * 100))
         subjectLabel = _subject_label_for_anomaly(anomaly)
         compactAction = _compact_action_for_anomaly(anomaly)
+        ipDetails = _compact_ip_details(anomaly)
         lines.append(
             f"- [{anomaly.riskLevel.upper()} {confidencePercent}%] "
             f"{anomaly.anomalyType} {subjectLabel}={anomaly.subject} "
-            f"messages={anomaly.messageCount} action={compactAction}"
+            f"{ipDetails}messages={anomaly.messageCount} action={compactAction}"
         )
 
     lines.extend(
@@ -92,6 +93,15 @@ def _subject_label_for_anomaly(anomaly: Anomaly) -> str:
     if anomaly.anomalyType in {"unknown-sender", "unexpected-provider"}:
         return "ip"
     return "domain"
+
+
+def _compact_ip_details(anomaly: Anomaly) -> str:
+    if anomaly.anomalyType not in {"unknown-sender", "unexpected-provider"}:
+        return ""
+
+    provider = anomaly.provider or "unknown"
+    rdns = anomaly.reverseDnsHostname or "unresolved"
+    return f"provider={provider} rdns={rdns} "
 
 
 def _compact_action_for_anomaly(anomaly: Anomaly) -> str:

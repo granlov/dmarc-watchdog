@@ -103,6 +103,8 @@ def _build_sender_anomalies(
                 message=message,
                 subject=sourceIp,
                 messageCount=count,
+                provider=senderProvider,
+                reverseDnsHostname=reverseDnsHostname,
             )
         )
     return items
@@ -124,6 +126,8 @@ def _build_unexpected_provider_anomalies(
                 message=message,
                 subject=sourceIp,
                 messageCount=count,
+                provider=senderProvider,
+                reverseDnsHostname=reverseDnsHostname,
             )
         )
     return items
