@@ -5,7 +5,7 @@
   },
   "paths": {
     "stateFile": "state/state.json",
-    "allowlistFile": "config/allowlist.json",
+    "allowlistFile": "config/allowlist.local.json",
     "localReportDirectory": "samples/reports"
   },
   "imap": {

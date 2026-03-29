@@ -43,12 +43,13 @@ Rules:
 Tracked files are safe examples:
 
 - `config/config.example.json`
-- `config/allowlist.json`
+- `config/allowlist.example.json`
 
 Ignored files include:
 
 - `.env`
 - `config/config.local.json`
+- `config/allowlist.local.json`
 - `state/`
 - `samples/reports/`
 
@@ -75,7 +76,7 @@ dmarc_watchdog/
   runner.py
 config/
   config.example.json
-  allowlist.json
+  allowlist.example.json
 state/                  # generated locally
 samples/reports/        # local test input, ignored by git
 ```
@@ -101,6 +102,7 @@ Default mode is `local-files`, reading from `samples/reports/`.
 1. Move to IMAP integration only after local flow works:
 
 - copy `config/config.example.json` to `config/config.local.json`
+- copy `config/allowlist.example.json` to `config/allowlist.local.json`
 - set `runtime.mode` to `imap`
 - add IMAP credentials locally
 - run with `--config config/config.local.json`

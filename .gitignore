@@ -7,6 +7,7 @@ __pycache__/
 # Local configuration and secrets
 .env
 config/config.local.json
+config/allowlist.local.json
 
 # Runtime state
 state/
