@@ -36,5 +36,16 @@
       "AWS"
     ],
     "providerPatternsFile": "config/providers.json"
+  },
+  "alerts": {
+    "enabled": false,
+    "smtpHost": "smtp.example.com",
+    "smtpPort": 587,
+    "smtpUsername": "your-email@example.com",
+    "smtpPassword": "your-app-password",
+    "fromAddress": "dmarc-watchdog@example.com",
+    "toAddresses": [
+      "security-team@example.com"
+    ]
   }
 }

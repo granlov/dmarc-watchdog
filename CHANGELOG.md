@@ -4,6 +4,13 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-29
+
+### Added
+
+- Email alerts: when anomalies are detected, send notification to configured email addresses via SMTP. Enable in `alerts.enabled` with SMTP credentials.
+- Alert configuration in `alerts` section of config: `smtpHost`, `smtpPort`, `smtpUsername`, `smtpPassword`, `fromAddress`, `toAddresses`.
+
 ## [1.2.0] - 2026-03-29
 
 ### Changed

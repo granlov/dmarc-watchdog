@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 
+from .alerter import send_alert_email
 from .analyzer import detect_anomalies
 from .config import AppConfig, load_allowlist
 from .dmarc_parser import extract_xml_documents, parse_dmarc_xml
@@ -46,6 +47,7 @@ def run_watchdog(appConfig: AppConfig) -> int:
         )
 
         _print_summary(parsedRecords, anomalies)
+        send_alert_email(appConfig.alerts, anomalies, domain="dmarc-watchdog")
 
         state["processedAttachmentHashes"] = processedHashes
         stateStore.mark_successful_run(state)
