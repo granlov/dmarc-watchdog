@@ -25,7 +25,7 @@ def run_watchdog(appConfig: AppConfig) -> int:
     state = stateStore.load_state()
 
     try:
-        mailPayloads = _load_mail_payloads(appConfig)
+        mailPayloads = _load_mail_payloads(appConfig, state)
         parsedRecords, processedHashes = _parse_records_with_dedup(mailPayloads, state)
         enrich_sender_identity(
             parsedRecords=parsedRecords,
@@ -56,12 +56,13 @@ def run_watchdog(appConfig: AppConfig) -> int:
         return 1
 
 
-def _load_mail_payloads(appConfig: AppConfig) -> list[MailPayload]:
+def _load_mail_payloads(appConfig: AppConfig, state: dict) -> list[MailPayload]:
     mode = appConfig.runtime.mode.lower()
     if mode == "local-files":
         return fetch_mail_payloads_from_local_directory(appConfig.paths.localReportDirectory)
 
     if mode == "imap":
+        lastRunUtc = _parse_last_successful_run(state)
         return fetch_mail_payloads_from_imap(
             host=appConfig.imap.host,
             port=appConfig.imap.port,
@@ -72,9 +73,17 @@ def _load_mail_payloads(appConfig: AppConfig) -> list[MailPayload]:
             filterFromContains=appConfig.imap.filterFromContains,
             filterToContains=appConfig.imap.filterToContains,
             lookbackHours=appConfig.runtime.lookbackHours,
+            sinceUtc=lastRunUtc,
         )
 
     raise ProcessingError(f"Unsupported runtime mode: {appConfig.runtime.mode}")
+
+
+def _parse_last_successful_run(state: dict) -> datetime | None:
+    lastRunValue = state.get("lastSuccessfulRunUtc")
+    if not lastRunValue:
+        return None
+    return datetime.fromisoformat(lastRunValue)
 
 
 def _parse_records_with_dedup(

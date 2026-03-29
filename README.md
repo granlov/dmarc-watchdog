@@ -133,23 +133,19 @@ To reduce noisy IP-only output, each sender IP is enriched with:
 - reverse DNS hostname (when resolvable)
 - provider label based on hostname patterns
 
-Default approved providers are:
-
-- one.com
-- shopify
-- aws ses
-
 If a sender does not match approved providers, the tool emits `Unexpected provider`.
 
 You can tune patterns and approved providers in `senderIdentity` inside config.
 
 ## Cron Example
 
-Run every day at 07:00:
+Run every 3 hours (handles the case where the machine is off at a specific time):
 
 ```cron
-0 7 * * * cd /path/to/dmarc-watchdog && /path/to/.venv/bin/python -m dmarc_watchdog.cli --config config/config.local.json >> watchdog.log 2>&1
+0 */3 * * * cd /path/to/dmarc-watchdog && .venv/bin/python -m dmarc_watchdog.cli --config config/config.local.json >> watchdog.log 2>&1
 ```
+
+The watchdog automatically catches up from the last successful run, so reports are never missed after a long absence (vacation, machine off for weeks). On the first run, it falls back to `lookbackHours` in config.
 
 ## Current Status
 

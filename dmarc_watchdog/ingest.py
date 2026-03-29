@@ -53,9 +53,13 @@ def fetch_mail_payloads_from_imap(
     filterFromContains: list[str],
     filterToContains: list[str],
     lookbackHours: int,
+    sinceUtc: datetime | None = None,
 ) -> list[MailPayload]:
     nowUtc = datetime.now(timezone.utc)
-    sinceDate = (nowUtc - timedelta(hours=lookbackHours)).strftime("%d-%b-%Y")
+    if sinceUtc is not None:
+        sinceDate = sinceUtc.strftime("%d-%b-%Y")
+    else:
+        sinceDate = (nowUtc - timedelta(hours=lookbackHours)).strftime("%d-%b-%Y")
 
     with imaplib.IMAP4_SSL(host=host, port=port) as mailboxConnection:
         mailboxConnection.login(username, password)
