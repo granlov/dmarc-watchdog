@@ -1,7 +1,6 @@
 {
   "runtime": {
-    "mode": "local-files",
-    "lookbackHours": 48
+    "mode": "local-files"
   },
   "paths": {
     "stateFile": "state/state.example.json",

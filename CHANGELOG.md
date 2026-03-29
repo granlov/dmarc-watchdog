@@ -4,6 +4,18 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-29
+
+### Changed
+
+- IMAP fetch now automatically catches up from the last successful run instead of using a fixed lookback window. First run still uses `lookbackHours` if available, but now fetches ALL messages by default. No reports are missed after long absences (vacation, machine off).
+- Removed `lookbackHours` configuration field — no longer needed for IMAP mode.
+- Simplified README: now focuses on setup, scheduling, and why the tool exists.
+
+### Fixed
+
+- Date-only IMAP `SINCE` query provides ~24h natural overlap for email send delays, so no additional overlap configuration needed.
+
 ## [1.1.0] - 2026-03-29
 
 ### Changed
