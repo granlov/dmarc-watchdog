@@ -18,8 +18,25 @@
   },
   "rules": {
     "alertOnUnknownSender": true,
+    "alertOnUnexpectedProvider": true,
     "alertOnSpfFailure": true,
     "alertOnDkimFailure": true,
     "alertOnAlignmentFailure": true
+  },
+  "senderIdentity": {
+    "enableReverseDns": true,
+    "approvedProviders": [
+      "one.com",
+      "shopify"
+    ],
+    "providerHostnamePatterns": {
+      "one.com": [
+        "one.com"
+      ],
+      "shopify": [
+        "shopify",
+        "sendgrid.net"
+      ]
+    }
   }
 }

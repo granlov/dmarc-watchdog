@@ -12,6 +12,8 @@ class ParsedRecord:
     spfResult: str
     dkimResult: str
     disposition: str
+    reverseDnsHostname: str = "unresolved"
+    senderProvider: str = "unknown"
 
 
 @dataclass

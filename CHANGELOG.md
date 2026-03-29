@@ -13,3 +13,4 @@ Alla viktiga ändringar i projektet dokumenteras här.
 ### Changed
 
 - Allowlist hanteras nu som lokal otrackad fil (`config/allowlist.local.json`) med en checkad exempelmall (`config/allowlist.example.json`)
+- Avsändare berikas nu med rDNS och provider-etikett, samt varning för oväntad provider

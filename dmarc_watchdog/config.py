@@ -30,9 +30,17 @@ class PathConfig:
 @dataclass
 class RuleConfig:
     alertOnUnknownSender: bool
+    alertOnUnexpectedProvider: bool
     alertOnSpfFailure: bool
     alertOnDkimFailure: bool
     alertOnAlignmentFailure: bool
+
+
+@dataclass
+class SenderIdentityConfig:
+    enableReverseDns: bool
+    approvedProviders: list[str]
+    providerHostnamePatterns: dict[str, list[str]]
 
 
 @dataclass
@@ -41,6 +49,7 @@ class AppConfig:
     paths: PathConfig
     imap: ImapConfig
     rules: RuleConfig
+    senderIdentity: SenderIdentityConfig
 
 
 class ConfigurationError(Exception):
@@ -58,9 +67,36 @@ def load_app_config(configFilePath: str) -> AppConfig:
     runtime = RuntimeConfig(**parsedJson["runtime"])
     paths = PathConfig(**parsedJson["paths"])
     imap = ImapConfig(**parsedJson["imap"])
-    rules = RuleConfig(**parsedJson["rules"])
 
-    return AppConfig(runtime=runtime, paths=paths, imap=imap, rules=rules)
+    parsedRules = parsedJson.get("rules", {})
+    rules = RuleConfig(
+        alertOnUnknownSender=parsedRules.get("alertOnUnknownSender", True),
+        alertOnUnexpectedProvider=parsedRules.get("alertOnUnexpectedProvider", True),
+        alertOnSpfFailure=parsedRules.get("alertOnSpfFailure", True),
+        alertOnDkimFailure=parsedRules.get("alertOnDkimFailure", True),
+        alertOnAlignmentFailure=parsedRules.get("alertOnAlignmentFailure", True),
+    )
+
+    parsedSenderIdentity = parsedJson.get("senderIdentity", {})
+    senderIdentity = SenderIdentityConfig(
+        enableReverseDns=parsedSenderIdentity.get("enableReverseDns", True),
+        approvedProviders=parsedSenderIdentity.get("approvedProviders", ["one.com", "shopify"]),
+        providerHostnamePatterns=parsedSenderIdentity.get(
+            "providerHostnamePatterns",
+            {
+                "one.com": ["one.com"],
+                "shopify": ["shopify", "sendgrid.net"],
+            },
+        ),
+    )
+
+    return AppConfig(
+        runtime=runtime,
+        paths=paths,
+        imap=imap,
+        rules=rules,
+        senderIdentity=senderIdentity,
+    )
 
 
 def load_allowlist(allowlistFilePath: str) -> dict[str, list[str]]:

@@ -17,6 +17,7 @@ Included:
 - extract XML from xml, gz, and zip attachments
 - parse aggregate records (source IP, header_from, SPF, DKIM, disposition, count)
 - detect anomalies with deterministic rules
+- enrich sender IPs with reverse DNS and provider label for human-readable output
 - maintain local state for deduplication and heartbeat proof-of-life
 - print concise CLI output
 
@@ -120,6 +121,22 @@ MVP uses passive proof-of-life:
 3. You inspect on demand.
 
 No daily push notification is enabled by default in MVP.
+
+## Sender Identity and Provider Guardrails
+
+To reduce noisy IP-only output, each sender IP is enriched with:
+
+- reverse DNS hostname (when resolvable)
+- provider label based on hostname patterns
+
+Default approved providers are:
+
+- one.com
+- shopify
+
+If a sender does not match approved providers, the tool emits `Unexpected provider`.
+
+You can tune patterns and approved providers in `senderIdentity` inside config.
 
 ## Cron Example
 

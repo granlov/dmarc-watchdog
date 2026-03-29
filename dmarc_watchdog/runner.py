@@ -12,6 +12,7 @@ from .ingest import (
     fetch_mail_payloads_from_local_directory,
 )
 from .models import Anomaly, ParsedRecord
+from .sender_identity import enrich_sender_identity
 from .state_store import StateStore
 
 
@@ -26,12 +27,19 @@ def run_watchdog(appConfig: AppConfig) -> int:
     try:
         mailPayloads = _load_mail_payloads(appConfig)
         parsedRecords, processedHashes = _parse_records_with_dedup(mailPayloads, state)
+        enrich_sender_identity(
+            parsedRecords=parsedRecords,
+            providerHostnamePatterns=appConfig.senderIdentity.providerHostnamePatterns,
+            enableReverseDns=appConfig.senderIdentity.enableReverseDns,
+        )
 
         allowlist = load_allowlist(appConfig.paths.allowlistFile)
         anomalies = detect_anomalies(
             parsedRecords=parsedRecords,
             allowlist=allowlist,
             alertOnUnknownSender=appConfig.rules.alertOnUnknownSender,
+            alertOnUnexpectedProvider=appConfig.rules.alertOnUnexpectedProvider,
+            approvedProviders=appConfig.senderIdentity.approvedProviders,
             alertOnSpfFailure=appConfig.rules.alertOnSpfFailure,
             alertOnDkimFailure=appConfig.rules.alertOnDkimFailure,
             alertOnAlignmentFailure=appConfig.rules.alertOnAlignmentFailure,
