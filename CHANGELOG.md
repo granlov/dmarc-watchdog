@@ -4,14 +4,18 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
-### Added (Unreleased)
+## [1.4.0] - 2026-03-29
 
-- IP-level guidance enrichment for anomalies: risk level, confidence, evidence, and recommended action.
+### Added (1.4.0)
+
+- IP-level guidance enrichment for anomalies: risk level, confidence, provider, rDNS, auth summary, and recommended action.
 - New explanation module (`dmarc_watchdog/anomaly_explainer.py`) that classifies likely-legitimate vs investigate-now cases using existing signals (rDNS, provider, SPF/DKIM, allowlist).
 
-### Changed (Unreleased)
+### Changed (1.4.0)
 
-- CLI and email alert output now include guidance context (`Why`, `Evidence`, `Action`) for each anomaly.
+- CLI and email output now present anomalies as readable 3-line blocks with header, `Info`, and `Action`.
+- Risk scoring for `Unexpected provider` now avoids over-escalating known-provider redirects while keeping true SPF/DKIM/alignment problems high.
+- `Info` now shows auth summaries like `SPF fail, DKIM pass` to explain score differences between similar IPs.
 
 ## [1.3.0] - 2026-03-29
 
