@@ -1,0 +1,25 @@
+{
+  "runtime": {
+    "mode": "local-files",
+    "lookbackHours": 24
+  },
+  "paths": {
+    "stateFile": "state/state.json",
+    "allowlistFile": "config/allowlist.json",
+    "localReportDirectory": "samples/reports"
+  },
+  "imap": {
+    "host": "imap.example.com",
+    "port": 993,
+    "username": "replace-me@example.com",
+    "password": "replace-me",
+    "mailbox": "INBOX",
+    "searchCriterion": "UNSEEN"
+  },
+  "rules": {
+    "alertOnUnknownSender": true,
+    "alertOnSpfFailure": true,
+    "alertOnDkimFailure": true,
+    "alertOnAlignmentFailure": true
+  }
+}

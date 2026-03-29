@@ -1,0 +1,2 @@
+# No external dependencies in MVP core.
+
