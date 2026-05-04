@@ -4,6 +4,13 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-05-04
+
+### Changed (1.4.1)
+
+- Added Klaviyo (`klaviyomail.com`, `klaviyodns.com`) as a recognized provider in `providers.json`.
+- Removed Mailbaby from `providers.json` (kept in `approvedProviders` config for domains that use it; not used by reliefahead.com).
+
 ## [1.4.0] - 2026-03-29
 
 ### Added (1.4.0)
