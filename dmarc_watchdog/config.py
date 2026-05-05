@@ -57,6 +57,12 @@ class AlertConfig:
 
 
 @dataclass
+class DiscordConfig:
+    enabled: bool
+    webhookUrl: str
+
+
+@dataclass
 class AppConfig:
     runtime: RuntimeConfig
     paths: PathConfig
@@ -64,6 +70,7 @@ class AppConfig:
     rules: RuleConfig
     senderIdentity: SenderIdentityConfig
     alerts: AlertConfig
+    discord: DiscordConfig
 
 
 class ConfigurationError(Exception):
@@ -125,6 +132,12 @@ def load_app_config(configFilePath: str) -> AppConfig:
         toAddresses=parsedAlerts.get("toAddresses", []),
     )
 
+    parsedDiscord = parsedJson.get("discord", {})
+    discord = DiscordConfig(
+        enabled=parsedDiscord.get("enabled", False),
+        webhookUrl=parsedDiscord.get("webhookUrl", ""),
+    )
+
     return AppConfig(
         runtime=runtime,
         paths=paths,
@@ -132,6 +145,7 @@ def load_app_config(configFilePath: str) -> AppConfig:
         rules=rules,
         senderIdentity=senderIdentity,
         alerts=alerts,
+        discord=discord,
     )
 
 

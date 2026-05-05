@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import smtplib
+import urllib.request
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone
@@ -148,3 +150,78 @@ def _human_action_text(anomaly: Anomaly) -> str:
     if anomaly.anomalyType == "alignment-failure":
         return "Urgent: investigate DMARC/SPF/DKIM alignment and possible spoofing."
     return "Review this anomaly."
+
+
+# ---------------------------------------------------------------------------
+# Discord
+# ---------------------------------------------------------------------------
+
+_DISCORD_COLOR_BY_RISK = {
+    "high": 0xED4245,    # red
+    "medium": 0xFEE75C,  # yellow
+    "low": 0x57F287,     # green
+}
+
+
+def send_discord_alert(discordConfig, anomalies: list[Anomaly], domain: str = "unknown") -> bool:
+    """
+    Post anomaly embeds to a Discord webhook.
+    Returns True if the message was posted, False otherwise.
+    """
+    if not discordConfig.enabled or not anomalies or not discordConfig.webhookUrl:
+        return False
+
+    try:
+        embeds = [_build_discord_embed(anomaly, domain) for anomaly in anomalies]
+
+        # Discord allows up to 10 embeds per message; split if needed
+        for batch_start in range(0, len(embeds), 10):
+            batch = embeds[batch_start : batch_start + 10]
+            payload = json.dumps({"embeds": batch}).encode("utf-8")
+            request = urllib.request.Request(
+                discordConfig.webhookUrl,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if response.status not in (200, 204):
+                    print(f"ERROR: Discord webhook returned status {response.status}")
+                    return False
+
+        return True
+    except Exception as exception:
+        print(f"ERROR: Failed to send Discord alert: {exception}")
+        return False
+
+
+def _build_discord_embed(anomaly: Anomaly, domain: str) -> dict:
+    color = _DISCORD_COLOR_BY_RISK.get(anomaly.riskLevel, 0xAAAAAA)
+    confidencePercent = int(round(anomaly.confidence * 100))
+    label = _human_anomaly_label(anomaly)
+    headerText = _human_header_text(anomaly)
+    infoText = _human_info_text(anomaly)
+    actionText = _human_action_text(anomaly)
+
+    fields = [
+        {"name": "Domain", "value": domain, "inline": True},
+        {"name": "Risk", "value": f"{anomaly.riskLevel.upper()} ({confidencePercent}%)", "inline": True},
+        {"name": "Messages", "value": str(anomaly.messageCount), "inline": True},
+        {"name": "Details", "value": infoText, "inline": False},
+        {"name": "Recommended action", "value": actionText, "inline": False},
+    ]
+
+    if anomaly.whyThisAppeared:
+        fields.append({"name": "Why this appeared", "value": anomaly.whyThisAppeared, "inline": False})
+
+    if anomaly.evidence:
+        fields.append({"name": "Evidence", "value": "\n".join(f"• {e}" for e in anomaly.evidence), "inline": False})
+
+    return {
+        "title": f"{label}: {anomaly.subject}" if anomaly.subject else label,
+        "description": headerText,
+        "color": color,
+        "fields": fields,
+        "footer": {"text": "dmarc-watchdog"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

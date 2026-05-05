@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 
-from .alerter import send_alert_email
+from .alerter import send_alert_email, send_discord_alert
 from .analyzer import detect_anomalies
 from .anomaly_explainer import enrich_anomaly_guidance
 from .config import AppConfig, load_allowlist
@@ -55,6 +55,7 @@ def run_watchdog(appConfig: AppConfig) -> int:
 
         _print_summary(parsedRecords, anomalies)
         send_alert_email(appConfig.alerts, anomalies, domain="dmarc-watchdog")
+        send_discord_alert(appConfig.discord, anomalies, domain="dmarc-watchdog")
 
         state["processedAttachmentHashes"] = processedHashes
         stateStore.mark_successful_run(state)

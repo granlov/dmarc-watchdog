@@ -4,6 +4,13 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-05
+
+### Added (1.5.0)
+
+- Discord-integration: anomalier postas som embeds till en Discord-webhook. Varje anomali får färg efter risknivå (röd/gul/grön), fält för domain, risk, meddelandeantal, detaljer, rekommendation, förklaring och bevis.
+- Ny `DiscordConfig`-dataclass med `enabled` och `webhookUrl`. Konfigureras under `discord`-nyckeln i config-JSON.
+
 ## [1.4.1] - 2026-05-04
 
 ### Changed (1.4.1)
