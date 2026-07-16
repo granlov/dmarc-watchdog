@@ -1,4 +1,5 @@
 {
+  "domain": "example.com",
   "runtime": {
     "mode": "local-files"
   },
@@ -50,6 +51,7 @@
   },
   "discord": {
     "enabled": false,
-    "webhookUrl": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+    "webhookUrl": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+    "heartbeatEnabled": true
   }
 }
