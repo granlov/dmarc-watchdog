@@ -4,6 +4,17 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-16
+
+### Added (1.6.0)
+
+- Weekly Discord heartbeat: a "Weekly status" summary (records parsed, runs, anomaly counts) posts every 7 days even when nothing is wrong, so a silent channel always means "all clear" — not "webhook is broken". Toggle independently via `discord.heartbeatEnabled`.
+- Config now carries an explicit `domain` field, shown on both anomaly alerts and the heartbeat instead of a generic placeholder.
+
+### Fixed (1.6.0)
+
+- Discord alerts were silently failing with `HTTP 403 Forbidden` because outgoing requests had no `User-Agent` header, which Discord's edge began rejecting. Added one.
+
 ## [1.5.0] - 2026-05-05
 
 ### Added (1.5.0)

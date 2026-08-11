@@ -177,22 +177,83 @@ def send_discord_alert(discordConfig, anomalies: list[Anomaly], domain: str = "u
         # Discord allows up to 10 embeds per message; split if needed
         for batch_start in range(0, len(embeds), 10):
             batch = embeds[batch_start : batch_start + 10]
-            payload = json.dumps({"embeds": batch}).encode("utf-8")
-            request = urllib.request.Request(
-                discordConfig.webhookUrl,
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=10) as response:
-                if response.status not in (200, 204):
-                    print(f"ERROR: Discord webhook returned status {response.status}")
-                    return False
+            if not _post_discord_payload(discordConfig.webhookUrl, {"embeds": batch}):
+                return False
 
         return True
     except Exception as exception:
         print(f"ERROR: Failed to send Discord alert: {exception}")
         return False
+
+
+def send_discord_heartbeat(discordConfig, stats: dict, domain: str = "unknown") -> bool:
+    """
+    Post a weekly status embed to a Discord webhook, so silence in the
+    channel never gets confused with a broken integration.
+    Returns True if the message was posted, False otherwise.
+    """
+    if not discordConfig.enabled or not getattr(discordConfig, "heartbeatEnabled", True) or not discordConfig.webhookUrl:
+        return False
+
+    try:
+        embed = _build_heartbeat_embed(stats, domain)
+        return _post_discord_payload(discordConfig.webhookUrl, {"embeds": [embed]})
+    except Exception as exception:
+        print(f"ERROR: Failed to send Discord heartbeat: {exception}")
+        return False
+
+
+def _post_discord_payload(webhookUrl: str, payload: dict) -> bool:
+    request = urllib.request.Request(
+        webhookUrl,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "dmarc-watchdog/1.0 (+https://github.com/)",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        if response.status not in (200, 204):
+            print(f"ERROR: Discord webhook returned status {response.status}")
+            return False
+    return True
+
+
+def _build_heartbeat_embed(stats: dict, domain: str) -> dict:
+    anomalyCounts: dict = stats.get("anomalyCounts", {})
+    totalAnomalies = sum(anomalyCounts.values())
+
+    if totalAnomalies:
+        anomalyText = "\n".join(f"• {_human_anomaly_label_from_type(t)}: {c}" for t, c in anomalyCounts.items())
+    else:
+        anomalyText = "None — all clear"
+
+    fields = [
+        {"name": "Domain", "value": domain, "inline": True},
+        {"name": "Runs", "value": str(stats.get("totalRuns", 0)), "inline": True},
+        {"name": "Records parsed", "value": str(stats.get("totalRecords", 0)), "inline": True},
+        {"name": "Anomalies", "value": anomalyText, "inline": False},
+    ]
+
+    return {
+        "title": "Weekly status",
+        "description": "dmarc-watchdog is alive and watching.",
+        "color": 0x5865F2,
+        "fields": fields,
+        "footer": {"text": "dmarc-watchdog"},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _human_anomaly_label_from_type(anomalyType: str) -> str:
+    return {
+        "unknown-sender": "New sender",
+        "unexpected-provider": "Unexpected provider",
+        "spf-failure": "SPF failure",
+        "dkim-failure": "DKIM failure",
+        "alignment-failure": "Alignment failure",
+    }.get(anomalyType, anomalyType)
 
 
 def _build_discord_embed(anomaly: Anomaly, domain: str) -> dict:

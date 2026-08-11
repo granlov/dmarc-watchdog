@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from .alerter import send_alert_email, send_discord_alert
+from .alerter import send_alert_email, send_discord_alert, send_discord_heartbeat
 from .analyzer import detect_anomalies
 from .anomaly_explainer import enrich_anomaly_guidance
 from .config import AppConfig, load_allowlist
@@ -16,6 +16,9 @@ from .ingest import (
 from .models import Anomaly, ParsedRecord
 from .sender_identity import enrich_sender_identity
 from .state_store import StateStore
+
+
+HEARTBEAT_INTERVAL = timedelta(days=7)
 
 
 class ProcessingError(Exception):
@@ -54,8 +57,11 @@ def run_watchdog(appConfig: AppConfig) -> int:
         )
 
         _print_summary(parsedRecords, anomalies)
-        send_alert_email(appConfig.alerts, anomalies, domain="dmarc-watchdog")
-        send_discord_alert(appConfig.discord, anomalies, domain="dmarc-watchdog")
+        send_alert_email(appConfig.alerts, anomalies, domain=appConfig.domain or "unknown")
+        send_discord_alert(appConfig.discord, anomalies, domain=appConfig.domain or "unknown")
+
+        _accumulate_weekly_stats(state, parsedRecords, anomalies)
+        _maybe_send_heartbeat(appConfig, state)
 
         state["processedAttachmentHashes"] = processedHashes
         stateStore.mark_successful_run(state)
@@ -121,6 +127,37 @@ def _parse_records_with_dedup(
 
 def _build_attachment_hash_key(attachmentBytes: bytes) -> str:
     return hashlib.sha256(attachmentBytes).hexdigest()
+
+
+def _accumulate_weekly_stats(state: dict, parsedRecords: list[ParsedRecord], anomalies: list[Anomaly]) -> None:
+    weeklyStats = state.setdefault(
+        "weeklyStats", {"totalRecords": 0, "totalRuns": 0, "anomalyCounts": {}}
+    )
+    weeklyStats["totalRecords"] += len(parsedRecords)
+    weeklyStats["totalRuns"] += 1
+
+    anomalyCounts = weeklyStats.setdefault("anomalyCounts", {})
+    for anomaly in anomalies:
+        anomalyCounts[anomaly.anomalyType] = anomalyCounts.get(anomaly.anomalyType, 0) + 1
+
+
+def _maybe_send_heartbeat(appConfig: AppConfig, state: dict) -> None:
+    lastHeartbeatValue = state.get("lastHeartbeatUtc")
+    now = datetime.now(timezone.utc)
+
+    if not lastHeartbeatValue:
+        state["lastHeartbeatUtc"] = now.isoformat()
+        return
+
+    lastHeartbeatUtc = datetime.fromisoformat(lastHeartbeatValue)
+    if now - lastHeartbeatUtc < HEARTBEAT_INTERVAL:
+        return
+
+    weeklyStats = state.get("weeklyStats", {"totalRecords": 0, "totalRuns": 0, "anomalyCounts": {}})
+    send_discord_heartbeat(appConfig.discord, weeklyStats, domain=appConfig.domain or "unknown")
+
+    state["weeklyStats"] = {"totalRecords": 0, "totalRuns": 0, "anomalyCounts": {}}
+    state["lastHeartbeatUtc"] = now.isoformat()
 
 
 def _print_summary(parsedRecords: list[ParsedRecord], anomalies: list[Anomaly]) -> None:

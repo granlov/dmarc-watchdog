@@ -60,6 +60,7 @@ class AlertConfig:
 class DiscordConfig:
     enabled: bool
     webhookUrl: str
+    heartbeatEnabled: bool = True
 
 
 @dataclass
@@ -71,6 +72,7 @@ class AppConfig:
     senderIdentity: SenderIdentityConfig
     alerts: AlertConfig
     discord: DiscordConfig
+    domain: str = ""
 
 
 class ConfigurationError(Exception):
@@ -136,6 +138,7 @@ def load_app_config(configFilePath: str) -> AppConfig:
     discord = DiscordConfig(
         enabled=parsedDiscord.get("enabled", False),
         webhookUrl=parsedDiscord.get("webhookUrl", ""),
+        heartbeatEnabled=parsedDiscord.get("heartbeatEnabled", True),
     )
 
     return AppConfig(
@@ -146,6 +149,7 @@ def load_app_config(configFilePath: str) -> AppConfig:
         senderIdentity=senderIdentity,
         alerts=alerts,
         discord=discord,
+        domain=parsedJson.get("domain", ""),
     )
 
 
