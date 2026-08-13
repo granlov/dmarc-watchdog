@@ -12,6 +12,7 @@ def detect_anomalies(
     alertOnSpfFailure: bool,
     alertOnDkimFailure: bool,
     alertOnAlignmentFailure: bool,
+    suppressBenignSpfForwarding: bool = True,
 ) -> list[Anomaly]:
     anomalies: list[Anomaly] = []
 
@@ -49,7 +50,14 @@ def detect_anomalies(
                 ] += record.messageCount
 
         if alertOnSpfFailure and record.spfResult.lower() != "pass":
-            spfFailureCounts[record.headerFromDomain] += record.messageCount
+            isBenignForwarding = (
+                suppressBenignSpfForwarding
+                and record.dkimResult.lower() == "pass"
+                and record.disposition.lower() == "none"
+                and record.senderProvider.lower() in approvedProviderSet
+            )
+            if not isBenignForwarding:
+                spfFailureCounts[record.headerFromDomain] += record.messageCount
 
         if alertOnDkimFailure and record.dkimResult.lower() != "pass":
             dkimFailureCounts[record.headerFromDomain] += record.messageCount

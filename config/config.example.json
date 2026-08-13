@@ -29,7 +29,8 @@
     "alertOnUnexpectedProvider": true,
     "alertOnSpfFailure": true,
     "alertOnDkimFailure": true,
-    "alertOnAlignmentFailure": true
+    "alertOnAlignmentFailure": true,
+    "suppressBenignSpfForwarding": true
   },
   "senderIdentity": {
     "enableReverseDns": true,
