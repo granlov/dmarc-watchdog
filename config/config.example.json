@@ -30,7 +30,8 @@
     "alertOnSpfFailure": true,
     "alertOnDkimFailure": true,
     "alertOnAlignmentFailure": true,
-    "suppressBenignSpfForwarding": true
+    "suppressBenignSpfForwarding": true,
+    "suppressUnresolvedAuthenticatedProvider": true
   },
   "senderIdentity": {
     "enableReverseDns": true,

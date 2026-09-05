@@ -13,6 +13,7 @@ def detect_anomalies(
     alertOnDkimFailure: bool,
     alertOnAlignmentFailure: bool,
     suppressBenignSpfForwarding: bool = True,
+    suppressUnresolvedAuthenticatedProvider: bool = True,
 ) -> list[Anomaly]:
     anomalies: list[Anomaly] = []
 
@@ -40,7 +41,16 @@ def detect_anomalies(
                 ] += record.messageCount
 
         if alertOnUnexpectedProvider:
-            if record.senderProvider.lower() not in approvedProviderSet:
+            # Provider classification runs on the rDNS hostname, so an unresolved PTR
+            # always reads as "unknown". When SPF and DKIM both pass the sender is
+            # authorised by our own DNS anyway, and naming it is cosmetic.
+            isUnnamedButAuthenticated = (
+                suppressUnresolvedAuthenticatedProvider
+                and record.reverseDnsHostname.lower() == "unresolved"
+                and record.spfResult.lower() == "pass"
+                and record.dkimResult.lower() == "pass"
+            )
+            if record.senderProvider.lower() not in approvedProviderSet and not isUnnamedButAuthenticated:
                 unexpectedProviderCounts[
                     (
                         record.sourceIp,

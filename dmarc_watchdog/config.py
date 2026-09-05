@@ -37,6 +37,7 @@ class RuleConfig:
     alertOnDkimFailure: bool
     alertOnAlignmentFailure: bool
     suppressBenignSpfForwarding: bool = True
+    suppressUnresolvedAuthenticatedProvider: bool = True
 
 
 @dataclass
@@ -115,6 +116,9 @@ def load_app_config(configFilePath: str) -> AppConfig:
         alertOnDkimFailure=parsedRules.get("alertOnDkimFailure", True),
         alertOnAlignmentFailure=parsedRules.get("alertOnAlignmentFailure", True),
         suppressBenignSpfForwarding=parsedRules.get("suppressBenignSpfForwarding", True),
+        suppressUnresolvedAuthenticatedProvider=parsedRules.get(
+            "suppressUnresolvedAuthenticatedProvider", True
+        ),
     )
 
     parsedSenderIdentity = parsedJson.get("senderIdentity", {})

@@ -49,6 +49,7 @@ def run_watchdog(appConfig: AppConfig) -> int:
             alertOnDkimFailure=appConfig.rules.alertOnDkimFailure,
             alertOnAlignmentFailure=appConfig.rules.alertOnAlignmentFailure,
             suppressBenignSpfForwarding=appConfig.rules.suppressBenignSpfForwarding,
+            suppressUnresolvedAuthenticatedProvider=appConfig.rules.suppressUnresolvedAuthenticatedProvider,
         )
         enrich_anomaly_guidance(
             anomalies=anomalies,

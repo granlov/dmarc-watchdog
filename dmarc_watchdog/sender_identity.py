@@ -1,6 +1,11 @@
 import socket
+import time
 
 from .models import ParsedRecord
+
+
+REVERSE_DNS_ATTEMPTS = 2
+REVERSE_DNS_RETRY_DELAY_SECONDS = 0.5
 
 
 def enrich_sender_identity(
@@ -28,11 +33,17 @@ def _resolve_reverse_dns(sourceIp: str, enableReverseDns: bool) -> str:
     if not enableReverseDns:
         return "disabled"
 
-    try:
-        resolvedHostname, _, _ = socket.gethostbyaddr(sourceIp)
-        return resolvedHostname.lower()
-    except Exception:
-        return "unresolved"
+    # A single transient PTR failure would misclassify a known sender as "unknown"
+    # and raise a false unexpected-provider alert, so retry once before giving up.
+    for attempt in range(REVERSE_DNS_ATTEMPTS):
+        try:
+            resolvedHostname, _, _ = socket.gethostbyaddr(sourceIp)
+            return resolvedHostname.lower()
+        except Exception:
+            if attempt < REVERSE_DNS_ATTEMPTS - 1:
+                time.sleep(REVERSE_DNS_RETRY_DELAY_SECONDS)
+
+    return "unresolved"
 
 
 def _classify_provider(

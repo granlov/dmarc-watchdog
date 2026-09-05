@@ -4,6 +4,11 @@ Alla viktiga ändringar i projektet dokumenteras här.
 
 ## [Unreleased]
 
+### Fixed (Unreleased)
+
+- Reverse DNS lookups now retry once before giving up. A single transient PTR failure used to leave a well-known sender classified as `unknown`, which raised a false `unexpected-provider` alert for shared sending pools that rotate IPs (Klaviyo/SendGrid).
+- `unexpected-provider` no longer fires when the PTR did not resolve and both SPF and DKIM pass. Results come from `policy_evaluated`, so a double pass means the message is DMARC-aligned and authorised by our own DNS — the provider name is then cosmetic. Disable via `rules.suppressUnresolvedAuthenticatedProvider`.
+
 ## [1.6.0] - 2026-07-16
 
 ### Added (1.6.0)
